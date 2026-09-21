@@ -1,0 +1,59 @@
+sudo apt update
+sudo apt upgrade -y
+sudo apt install openjdk-17-jdk -y
+sudo apt install build-essential doxygen git git-lfs curl wireshark python3-serial srecord rlwrap net-tools -y
+cd ~
+git clone --recursive https://github.com/contiki-ng/contiki-ng.git
+cd ~/contiki-ng
+git submodule update --init --recursive
+ls
+
+#chay contiki
+cd ~/contiki-ng/tools/cooja
+./gradlew run
+
+----------------------------------
+khi đổi qua iotlab thì phải 
+cd ~
+git clone https://github.com/iot-lab/iot-lab.git
+cd ~/iot-lab
+make setup-iot-lab-contiki-ng
+cd ~/iot-lab/parts/iot-lab-contiki-ng/contiki-ng/examples/hello-world
+#sửa makefile thành
+CONTIKI_PROJECT = hello-world
+all: $(CONTIKI_PROJECT)
+
+CFLAGS += -fcommon
+
+CONTIKI = ../..
+include $(CONTIKI)/Makefile.include
+#build
+#lưu target M3
+ARCH_PATH=../../../arch make TARGET=iotlab BOARD=m3 savetarget
+#make node
+ARCH_PATH=../../../arch make tên
+#rm build
+rm -rf build
+
+-----------------------
+#ssh để ghi log
+ssh dson@grenoble.iot-lab.info
+ssh-keygen -t ed25519
+cat ~/.ssh/id_ed25519.pub
+timeout 300 serial_aggregator -i 449907 | tee rpl-of0.log
+#đăng nhập với quyền author
+iotlab-auth -u dson
+#rm
+rm -f rpl-of0.log
+#kiem tra duong dan
+pwd
+ls -lh rpl-of0.log
+#tải về máy
+scp dson@grenoble.iot-lab.info:~/rpl-of0.log ~/Downloads/
+scp dson@grenoble.iot-lab.info:~/rpl-mrhof.log ~/Downloads/
+#lấy file tính khoảng cách
+iotlab-experiment get -i 449909 -n
+iotlab-experiment get -i 449909 -n > nodes-449909.json
+scp dson@grenoble.iot-lab.info:~/nodes-449909.json ~/Downloads/
+
+
