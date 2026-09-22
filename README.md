@@ -10,12 +10,6 @@ The project compares OF0 and MRHOF in RPL using:
 - Cooja Simulator
 - FIT IoT-LAB M3 nodes
 
-The evaluation focuses on:
-
-- Packet Delivery Ratio (PDR)
-- End-to-End Delay
-- Hop Count
-- Preferred Parent Changes
 
 Three network topologies are evaluated in Cooja:
 
