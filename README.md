@@ -1,6 +1,6 @@
 # Evaluation of RPL Objective Functions in Contiki
 
-This repository contains the source code, simulation files, experiment logs, and FIT IoT-LAB node information used to evaluate two RPL Objective Functions: OF0 and MRHOF.
+This repository contains the source code, simulation files, experiment logs, and FIT IoT-LAB node information used to evaluate two RPL Objective Functions: OF0 and MRHOF
 
 ## Project Overview
 
