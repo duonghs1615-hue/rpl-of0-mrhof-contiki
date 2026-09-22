@@ -8,7 +8,6 @@ The project compares OF0 and MRHOF in RPL using:
 
 - Contiki-NG
 - Cooja Simulator
-- RPL Lite
 - FIT IoT-LAB M3 nodes
 
 The evaluation focuses on:
