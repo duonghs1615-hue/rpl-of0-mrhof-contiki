@@ -3,6 +3,8 @@
 [![Tiếng Việt](https://img.shields.io/badge/Ti%E1%BA%BFng_Vi%E1%BB%87t-2ea44f?style=for-the-badge)](#vietnamese) [![English](https://img.shields.io/badge/English-0969da?style=for-the-badge)](#english)
 
 > Chọn ngôn ngữ ở trên để chuyển nhanh đến nội dung tương ứng. / Select a language above to jump to its section.
+>
+> **⚠️ Trước khi chạy:** Cần sửa 2 đường dẫn mã nguồn trong file `.csc` theo mục 3 bên dưới. / **Before running:** Update the 2 source paths in each `.csc` file as described in Section 3.
 
 ---
 
@@ -23,24 +25,30 @@ So sánh hai hàm mục tiêu của giao thức định tuyến RPL: **OF0** và
 - `fit-iotlab/`: mã nguồn cho M3; `logs/`: log Cooja và IoT-LAB.
 - `scripts/analyze_logs.py`: script xử lý log; `results/`: kết quả CSV của Cooja.
 
-### 3. Cách chạy mô phỏng
+### 3. Cách chạy mô phỏng (lưu ý: phải sửa đường dẫn)
 
-1. Chép `cooja/OF0/` vào `contiki-ng/examples/rpl-of0/` và `cooja/MRHOF/` vào `contiki-ng/examples/rpl-mrhof/`.
-2. Trong file `.csc`, sửa **hai dòng `<source>`** để trỏ tới đúng mã nguồn server và client (thay `[CONTIKI_DIR]` bằng đường dẫn Contiki-NG trên máy):
+1. Chép **đầy đủ 4 file** (`Makefile`, `project-conf.h`, `udp-server.c`, `udp-client.c`) từ `cooja/OF0/` vào `contiki-ng/examples/rpl-of0/`; làm tương tự với `cooja/MRHOF/` vào `contiki-ng/examples/rpl-mrhof/`.
+2. Mở file mô phỏng cần chạy trong **`cooja/topology/*.csc`** bằng trình soạn thảo văn bản. Tìm **2 dòng `<source>`** đang có:
+   ```xml
+   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-server.c</source>
+   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-client.c</source>
+   ```
+   **Đổi thành một trong hai cặp sau, tùy thuật toán muốn chạy:**
 
-   **OF0**
+   **OF0:**
    ```xml
    <source>[CONTIKI_DIR]/examples/rpl-of0/udp-server.c</source>
    <source>[CONTIKI_DIR]/examples/rpl-of0/udp-client.c</source>
    ```
-   **MRHOF**
+   **MRHOF:**
    ```xml
    <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-server.c</source>
    <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-client.c</source>
    ```
-3. Chạy Cooja: `cd ~/contiki-ng/tools/cooja && ./gradlew run`, chọn **File → Open simulation**, mở file `.csc` và biên dịch lại mote khi cần.
+   **Lưu ý:** Giữ nguyên `[CONTIKI_DIR]` vì Cooja dùng ký hiệu này để tham chiếu thư mục cài Contiki-NG. Chỉ cần đổi `rpl-udp` thành `rpl-of0` hoặc `rpl-mrhof` **nếu đã chép mã nguồn vào đúng các thư mục ở bước 1**. Nên lưu thành 2 bản `.csc` riêng để khỏi sửa lại khi đổi thuật toán.
+3. Chạy Cooja: `cd ~/contiki-ng/tools/cooja && ./gradlew run`, chọn **File → Open simulation**, mở `.csc` và biên dịch lại mote nếu cần.
 4. Kiểm tra log: **OCP 0 = OF0**, **OCP 1 = MRHOF**.
-5. Tạo lại CSV từ log (chạy ở thư mục gốc dự án):
+5. Phân tích lại log (chạy tại thư mục gốc dự án):
    ```bash
    python3 scripts/analyze_logs.py --logs logs/cooja --out results --window-seconds 300
    ```
@@ -91,24 +99,30 @@ This project compares two RPL objective functions, **Objective Function Zero (OF
 - `fit-iotlab/`: M3 source code; `logs/`: Cooja and IoT-LAB logs.
 - `scripts/analyze_logs.py`: log analysis script; `results/`: Cooja CSV results.
 
-### 3. Run Cooja simulations
+### 3. Run Cooja simulations (important: update source paths)
 
-1. Copy `cooja/OF0/` into `contiki-ng/examples/rpl-of0/` and `cooja/MRHOF/` into `contiki-ng/examples/rpl-mrhof/`.
-2. Edit **both `<source>` entries** (server and client) in each `.csc` file. Replace `[CONTIKI_DIR]` with the local Contiki-NG path:
+1. Copy **all four files** (`Makefile`, `project-conf.h`, `udp-server.c`, `udp-client.c`) from `cooja/OF0/` to `contiki-ng/examples/rpl-of0/`; likewise, copy the MRHOF files to `contiki-ng/examples/rpl-mrhof/`.
+2. Open the simulation file in **`cooja/topology/*.csc`** with a text editor. Find the **two `<source>` entries**:
+   ```xml
+   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-server.c</source>
+   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-client.c</source>
+   ```
+   **Replace them with the matching pair for the algorithm:**
 
-   **OF0**
+   **OF0:**
    ```xml
    <source>[CONTIKI_DIR]/examples/rpl-of0/udp-server.c</source>
    <source>[CONTIKI_DIR]/examples/rpl-of0/udp-client.c</source>
    ```
-   **MRHOF**
+   **MRHOF:**
    ```xml
    <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-server.c</source>
    <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-client.c</source>
    ```
-3. Start Cooja with `cd ~/contiki-ng/tools/cooja && ./gradlew run`. Select **File → Open simulation**, load a `.csc` file, and recompile motes if needed.
+   **Note:** Keep `[CONTIKI_DIR]` unchanged; Cooja uses it as a reference to the Contiki-NG installation. Only change `rpl-udp` to `rpl-of0` or `rpl-mrhof` **after copying the respective source files as in Step 1**. Save separate `.csc` copies for OF0 and MRHOF to avoid switching paths repeatedly.
+3. Start Cooja: `cd ~/contiki-ng/tools/cooja && ./gradlew run`, select **File → Open simulation**, load the `.csc` file, and recompile motes if necessary.
 4. Verify logs: **OCP 0 = OF0**, **OCP 1 = MRHOF**.
-5. Regenerate the CSV results from the project root:
+5. Regenerate CSV results from the project root:
    ```bash
    python3 scripts/analyze_logs.py --logs logs/cooja --out results --window-seconds 300
    ```
