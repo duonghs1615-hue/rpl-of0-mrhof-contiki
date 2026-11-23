@@ -28,7 +28,7 @@ SEED_RE = re.compile(r"(?:^|[_-])seed[_-]?(\d+)(?:$|[_-])", re.I)
 RUN_FIELDS = [
     "topology", "objective_function", "seed", "file",
     "window_start_s", "window_end_s", "last_log_timestamp_s", "duration_s",
-    "ocp_from_log", "sent", "received", "pdr_percent",
+    "ocp_from_log", "sent", "received", "raw_received", "unique_received", "duplicate_received", "pdr_percent",
     "matched_requests", "unmatched_receives", "late_receives_after_window",
     "mean_delay_ms", "std_delay_ms",
     "parent_switch_events", "initial_parent_selections", "parent_changes",
@@ -81,7 +81,7 @@ def of_from_filename(path: Path) -> str:
 
 def analyze(path: Path, root: Path, window_seconds: float) -> dict:
     """Analyze only 0 <= timestamp < window_seconds (Cooja simulation time)."""
-    sent = received = unmatched = parents = initial = late_receives = 0
+    sent = received = duplicate_received = unmatched = parents = initial = late_receives = 0
     first_event_s = last_event_s = None
     delays_ms: list[float] = []
     hops: list[int] = []
@@ -92,6 +92,9 @@ def analyze(path: Path, root: Path, window_seconds: float) -> dict:
     forward_events: dict[int, deque[tuple[float, int]]] = defaultdict(deque)
     # Pending requests, keyed by originating node ID and application sequence ID.
     pending: dict[tuple[int, int], deque[float]] = defaultdict(deque)
+    # Requests already confirmed at the root: (source node, application sequence).
+    # Used to distinguish duplicated receptions from genuinely unmatched logs.
+    delivered_keys: set[tuple[int, int]] = set()
     unknown_ips: set[str] = set()
     ocps: set[int] = set()
 
@@ -146,9 +149,11 @@ def analyze(path: Path, root: Path, window_seconds: float) -> dict:
                     if len(unknown_ips) < 3:
                         unknown_ips.add(recv["ip"])
                 else:
-                    queue = pending.get((client, int(recv["seq"])))
+                    key = (client, int(recv["seq"]))
+                    queue = pending.get(key)
                     if queue and queue[0] <= time_s:
                         send_time = queue.popleft()
+                        delivered_keys.add(key)
                         delays_ms.append((time_s - send_time) * 1000)
                         events = forward_events[client]
                         # Remove prior forwarding traffic to bound memory use.
@@ -166,7 +171,12 @@ def analyze(path: Path, root: Path, window_seconds: float) -> dict:
                                 duplicate_forwarder_packets += 1
                         else:
                             hop_unverified += 1
+                    elif key in delivered_keys:
+                        # Same source and sequence already counted as delivered.
+                        duplicate_received += 1
                     else:
+                        # Missing a matching send (or unknown ordering): do NOT
+                        # silently classify such events as duplicates.
                         unmatched += 1
                 continue
 
@@ -192,12 +202,14 @@ def analyze(path: Path, root: Path, window_seconds: float) -> dict:
         notes.append("No timestamped mote lines parsed")
     elif last_event_s < window_seconds - 5:
         notes.append("Log may end early: last timestamp < window end by >5 s")
+    if duplicate_received:
+        notes.append(f"{duplicate_received} duplicate UDP reception(s) excluded from Unique Rx and PDR")
     if unmatched:
-        notes.append(f"{unmatched} receptions could not be paired with sends")
+        notes.append(f"{unmatched} receptions could not be paired with sends (not classified as duplicates)")
     if unknown_ips:
         notes.append("Unknown sender IPv6 format: " + ",".join(sorted(unknown_ips)))
     if late_receives:
-        notes.append(f"{late_receives} response(s) arrived after the window; not counted in PDR")
+        notes.append(f"{late_receives} request(s) arrived after the window; not counted in PDR")
     if len(ocps) > 1:
         notes.append("WARNING: multiple OCP values found in one log")
     elif ocps and objective_function != "Unknown":
@@ -207,7 +219,9 @@ def analyze(path: Path, root: Path, window_seconds: float) -> dict:
     if not ocps:
         notes.append("RPL OCP could not be validated from log")
     if received > sent:
-        notes.append("WARNING: raw received > sent within the interval")
+        notes.append("Raw Rx > Sent: check Duplicate Rx / unmatched receptions")
+    if received != len(delays_ms) + duplicate_received + unmatched:
+        notes.append("WARNING: Raw Rx does not equal Unique Rx + Duplicate Rx + unmatched")
     if hop_unverified:
         notes.append(f"Hop Count unavailable for {hop_unverified} matched UDP requests: "
                      "no matching RPL reception at destination")
@@ -229,7 +243,11 @@ def analyze(path: Path, root: Path, window_seconds: float) -> dict:
                       if first_event_s is not None else "",
         "ocp_from_log": ",".join(map(str, sorted(ocps))) if ocps else "",
         "sent": sent,
+        # Backward-compatible legacy CSV column 'received' is the RAW event count.
         "received": received,
+        "raw_received": received,
+        "unique_received": len(delays_ms),
+        "duplicate_received": duplicate_received,
         # Count confirmed application deliveries, avoiding duplicate/unmatched lines.
         "pdr_percent": round(100 * matched / sent, 4) if sent else "",
         "matched_requests": matched,
@@ -308,20 +326,29 @@ def main() -> int:
         writer.writerows(summarize(rows))
 
     print(f"Simulation-time analysis window: [0, {args.window_seconds:g}) seconds")
-    print(f"{'Topology':8} {'OF':6} {'Sent':>5} {'Recv':>5} {'PDR%':>9} "
-          f"{'Delay ms':>10} {'Hop':>7} {'Parent':>6} {'OCP':>4} {'LogEnd(s)':>10}")
+    print(f"{'Topology':8} {'OF':6} {'Seed':>6} {'Sent':>5} {'Raw Rx':>6} "
+          f"{'Unique Rx':>9} {'Dup Rx':>6} {'PDR%':>9} "
+          f"{'Delay ms':>9} {'Hop':>7} {'Parent':>6} {'OCP':>4}  File log")
     for row in rows:
-        print(f"{row['topology']:8} {row['objective_function']:6} {row['sent']:5} "
-              f"{row['received']:5} {str(row['pdr_percent']):>9} "
-              f"{str(row['mean_delay_ms']):>10} {str(row['mean_hop_count']):>7} {row['parent_changes']:6} "
-              f"{str(row['ocp_from_log']):>4} {str(row['last_log_timestamp_s']):>10}")
+        # Seed is read from the .log filename (e.g. grid_seed101.log -> 101).
+        # Keep full log path in CSV; print the short path to make Terminal readable.
+        logfile = Path(row['objective_function']) / Path(row['file']).name
+        print(f"{row['topology']:8} {row['objective_function']:6} {str(row['seed']):>6} {row['sent']:5} "
+              f"{row['raw_received']:6} {row['unique_received']:9} {row['duplicate_received']:6} "
+              f"{str(row['pdr_percent']):>9} {str(row['mean_delay_ms']):>9} "
+              f"{str(row['mean_hop_count']):>7} {row['parent_changes']:6} "
+              f"{str(row['ocp_from_log']):>4}  {logfile}")
         noteworthy = [note for note in row["notes"].split("; ")
                        if "WARNING" in note or "may end early" in note
-                       or "after the window" in note or "could not be paired" in note]
+                       or "after the window" in note or "could not be paired" in note
+                       or "duplicate UDP" in note or "Raw Rx > Sent" in note]
         for note in noteworthy:
             print("  NOTE:", note)
     print(f"\nSaved: {runs_path}\nSaved: {summary_path}")
-    print("Note: existing log seeds remain 'unknown' unless recorded in filenames.")
+    print("Note: Raw Rx = all received-request log events; Unique Rx = matched deliveries;")
+    print("      Dup Rx = repeated receptions with a previously matched source/sequence.")
+    print("      Other unmatched receptions are listed separately in CSV notes.")
+    print("Note: Seed is identified from the .log filename, not verified from Cooja settings.")
     print("Note: Hop Count = matched RPL upward-forwarding events per delivered request;"
           " repeated forwarder events are flagged in CSV notes.")
     return 0
