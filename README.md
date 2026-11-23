@@ -40,4 +40,4 @@ Means across 5 labeled runs per case:
 python3 scripts/analyze_logs.py --logs logs/cooja --out results --window-seconds 300
 ```
 
-*Hop count is estimated from RPL forwarding logs; parent changes exclude initial parent selection. The six baseline logs are labeled seed `123456`, but their seeds have not been independently confirmed from the logs. FIT IoT-LAB results are not included in these CSVs.*
+**Notes:** Hop count is estimated from RPL logs. Parent changes exclude initial parent selection. CSV results cover Cooja only; FIT IoT-LAB results are stored separately.
