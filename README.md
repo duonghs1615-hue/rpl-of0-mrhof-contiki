@@ -1,10 +1,16 @@
-# RPL OF0 vs MRHOF (Contiki-NG / Cooja)
+# RPL OF0 vs MRHOF — Contiki-NG
 
-Compare **OF0** and **MRHOF** on **Line, Grid, Random** topologies using 15 nodes (1 root, 14 clients), RPL Lite and CSMA. Each run is analyzed over **300 simulated seconds**.
+Compare **OF0** and **MRHOF** using RPL Lite on **Cooja** and the **FIT IoT-LAB** testbed.
 
-## Results
+## Experiments
 
-Averages from 30 labeled logs (5 runs per topology and objective function):
+- **Cooja:** 15 nodes (1 root, 14 UDP clients); Line, Grid, and Random topologies; 5 labeled runs per topology/OF; 300-second analysis window.
+- **FIT IoT-LAB:** 15 M3 nodes at Grenoble (root `m3-207`, clients `m3-208`–`m3-221`); tests with both OF0 and MRHOF. Hardware experiment logs are kept separately.
+- **Metrics:** packet delivery ratio (PDR), packet delay, hop count, and preferred-parent changes.
+
+## Cooja results
+
+Means across 5 labeled runs per case:
 
 | Topology | OF | PDR (%) | Delay (ms) | Hops* | Parent changes |
 |---|---|---:|---:|---:|---:|
@@ -15,24 +21,23 @@ Averages from 30 labeled logs (5 runs per topology and objective function):
 | Random | OF0 | 99.941 | 94.954 | 3.497 | 5.4 |
 | Random | MRHOF | 100.000 | 94.467 | 3.477 | 0.0 |
 
-**Finding:** Both achieve high PDR. MRHOF shows fewer parent changes in these runs; delay and hop-count differences are small.
+**Observation:** Both achieved high PDR; MRHOF had fewer parent changes in these Cooja runs. Delay and hop-count differences were small.
 
-## Repository
+## Repository layout
 
-- `cooja/OF0/`, `cooja/MRHOF/`: source and configuration
-- `cooja/topology/`: Cooja simulation files (`.csc`)
-- `logs/cooja/`: simulation logs
-- `scripts/analyze_logs.py`: analysis script
-- `results/`: per-run and summary CSV files
+- `cooja/{OF0,MRHOF}/` — simulation source and OF configuration
+- `cooja/topology/` — `.csc` topology/seed files
+- `fit-iotlab/{OF0,MRHOF}/` — firmware source for M3 nodes
+- `logs/cooja/` and `logs/fit-iotlab/` — raw logs from each environment
+- `node-positions/` — FIT IoT-LAB node coordinates
+- `scripts/analyze_logs.py` — **Cooja** log analyzer
+- `results/cooja_runs.csv` — metrics for individual Cooja runs
+- `results/cooja_summary.csv` — aggregated **Cooja-only** metrics
 
-## Reproduce
-
-1. Copy the chosen OF's source/configuration to `contiki-ng/examples/rpl-udp/`.
-2. Open a `.csc` in Cooja, recompile both mote types, and check the log for **OCP 0** (OF0) or **OCP 1** (MRHOF).
-3. Run past 300 s, save the log, and analyze from the repository root:
+## Reproduce Cooja analysis
 
 ```bash
 python3 scripts/analyze_logs.py --logs logs/cooja --out results --window-seconds 300
 ```
 
-*Hops are estimated from RPL log events. Parent changes exclude initial parent selection. Node positions remain fixed across seeds. The six baseline logs are labeled `123456`, but the seed cannot be independently verified from the logs alone.*
+*Hop count is estimated from RPL forwarding logs; parent changes exclude initial parent selection. The six baseline logs are labeled seed `123456`, but their seeds have not been independently confirmed from the logs. FIT IoT-LAB results are not included in these CSVs.*
