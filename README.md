@@ -45,6 +45,21 @@ libreoffice --calc results/cooja_summary.csv
 2. Mở file `.csc` trong `cooja/topology/`. Hai dòng `<source>` đang trỏ tới `examples/rpl-udp/` cần được đổi thành **`examples/rpl-of0/`** hoặc **`examples/rpl-mrhof/`** cho cả `udp-client.c` và `udp-server.c`. Giữ nguyên biến `[CONTIKI_DIR]`. Nên lưu `.csc` riêng cho từng OF.
 3. Mở Cooja bằng `cd ~/contiki-ng/tools/cooja && ./gradlew run`, nạp mô phỏng và biên dịch lại mote nếu cần. Kiểm tra OCP trong log để xác nhận OF.
 
+### Kiểm chứng trên FIT IoT-LAB (phần cứng thật)
+
+- **Nền tảng:** 15 node **M3 tại Grenoble**; `m3-207` là RPL Root, `m3-208` đến `m3-221` là 14 UDP client.
+- **Cấu hình:** hai bộ mã nguồn riêng tại `fit-iotlab/OF0/` và `fit-iotlab/MRHOF/` (khác nhau ở `RPL_CONF_OF_OCP` trong `project-conf.h`). Firmware `.iotlab` đã lưu tại `logs/fit-iotlab/OF0/` và `logs/fit-iotlab/MRHOF/`.
+- **Thực hiện:** nạp firmware server cho Root, firmware client cho 14 node còn lại bằng FIT IoT-LAB; thu log serial cho từng OF trong khoảng **300 giây**. Ví dụ lệnh thu log: `timeout 300 serial_aggregator -i <experiment_id> | tee rpl-of0.log` (thay tên file cho MRHOF).
+
+| Chỉ số | OF0 | MRHOF |
+|---|---:|---:|
+| Gói gửi / Root nhận | 420 / 420 | 417 / 417 |
+| PDR uplink | 100% | 100% |
+| Hop Count | 1 | 1 |
+| Parent Changes | 0 | 0 |
+
+Log gốc: `logs/fit-iotlab/OF0/iotlab-of0.log` và `logs/fit-iotlab/MRHOF/iotlab-mrhof.log`. **Script `scripts/analyze_logs.py` chỉ xử lý log Cooja**, không phân tích log FIT IoT-LAB. Không so sánh Delay của FIT IoT-LAB vì timestamp thu qua `serial_aggregator` không phải phép đo trễ đầu cuối đáng tin cậy. Trong thử nghiệm này, các node gần Root nên đường uplink chủ yếu trực tiếp **1 hop**; kết quả phần cứng giúp kiểm chứng hoạt động nhưng chưa thể hiện ưu thế định tuyến nhiều hop của thuật toán nào.
+
 ### Kết quả và hạn chế
 
 | Topology | OF | PDR TB (%) | Delay TB (ms) | Hop TB* | Đổi parent TB |
@@ -105,6 +120,21 @@ libreoffice --calc results/cooja_summary.csv
 1. Copy `Makefile`, `project-conf.h`, `udp-client.c`, and `udp-server.c` from `cooja/OF0/` into `contiki-ng/examples/rpl-of0/`; copy the MRHOF counterparts into `contiki-ng/examples/rpl-mrhof/`.
 2. Open a `.csc` file under `cooja/topology/`. Change the two `<source>` entries for `udp-client.c` and `udp-server.c` from `examples/rpl-udp/` to **`examples/rpl-of0/`** or **`examples/rpl-mrhof/`**, matching the OF. Keep `[CONTIKI_DIR]` unchanged. Separate `.csc` copies are recommended.
 3. Start Cooja with `cd ~/contiki-ng/tools/cooja && ./gradlew run`, load the simulation, and recompile motes if required. Verify the OCP in the logs.
+
+### FIT IoT-LAB validation (real hardware)
+
+- **Platform:** 15 **M3 nodes at Grenoble**; `m3-207` is the RPL root and `m3-208`–`m3-221` are 14 UDP clients.
+- **Configuration:** separate sources in `fit-iotlab/OF0/` and `fit-iotlab/MRHOF/` (selected through `RPL_CONF_OF_OCP` in `project-conf.h`). Built `.iotlab` firmware is included in `logs/fit-iotlab/OF0/` and `logs/fit-iotlab/MRHOF/`.
+- **Procedure:** flash server firmware to the root and client firmware to the other 14 nodes through FIT IoT-LAB; capture serial logs for each OF for **300 seconds**. Example capture command: `timeout 300 serial_aggregator -i <experiment_id> | tee rpl-of0.log` (change output name for MRHOF).
+
+| Metric | OF0 | MRHOF |
+|---|---:|---:|
+| Sent / received at root | 420 / 420 | 417 / 417 |
+| Uplink PDR | 100% | 100% |
+| Hop count | 1 | 1 |
+| Parent changes | 0 | 0 |
+
+Raw logs: `logs/fit-iotlab/OF0/iotlab-of0.log` and `logs/fit-iotlab/MRHOF/iotlab-mrhof.log`. **`scripts/analyze_logs.py` processes Cooja logs only**, not FIT IoT-LAB data. FIT IoT-LAB delay is not compared because timestamps collected by `serial_aggregator` do not reliably measure end-to-end delay. The nodes were close enough to the root for mainly **single-hop uplink** routes; the hardware experiment validates operation but does not establish which OF performs better in multi-hop conditions.
 
 ### Results and limitations
 
