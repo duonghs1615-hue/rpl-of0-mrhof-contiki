@@ -60,14 +60,6 @@ libreoffice --calc results/cooja_summary.csv
 
 **Hạn chế:** chỉ 15 node và 300 giây; radio mô phỏng cấu hình xác suất thành công truyền/nhận bằng 1.0; 5 seed cùng topology giữ nguyên vị trí node; chưa đánh giá suy hao mạnh, tải cao, năng lượng hay độ ổn định dài hạn. **MRHOF ít đổi parent hơn trong các thử nghiệm này**, nhưng không có cơ sở kết luận luôn tốt hơn OF0.
 
-### Cập nhật GitHub
-
-Sau khi chạy script và kiểm tra kết quả, cập nhật hai file `results/cooja_runs.csv` và `results/cooja_summary.csv`. **Nếu GitHub chưa có bản `analyze_logs.py` mới và README này thì cập nhật cả hai file đó.** Ví dụ:
-
-```bash
-git add README.md scripts/analyze_logs.py results/cooja_runs.csv results/cooja_summary.csv
-git commit -m "Update README and Cooja log analysis results"
-git push
 ```
 
 [🇬🇧 English](#english) · [⬆ Chọn ngôn ngữ](#rpl-of0-vs-mrhof--contiki-ng)
@@ -130,14 +122,6 @@ libreoffice --calc results/cooja_summary.csv
 
 **Limitations:** 15 nodes and a 300-second window; radio transmission/reception success probabilities configured to 1.0; identical node positions across seeds within each topology; degraded links, heavy traffic, energy use, and long-term stability were not evaluated. **MRHOF showed fewer parent changes in these runs**, but these results do not establish universal superiority over OF0.
 
-### Update GitHub
-
-After running the script, upload the updated `results/cooja_runs.csv` and `results/cooja_summary.csv`. **Also upload the latest `scripts/analyze_logs.py` and this `README.md` if they are not yet on GitHub.** For example:
-
-```bash
-git add README.md scripts/analyze_logs.py results/cooja_runs.csv results/cooja_summary.csv
-git commit -m "Update README and Cooja log analysis results"
-git push
 ```
 
 [🇻🇳 Tiếng Việt](#vietnamese) · [⬆ Language selection](#rpl-of0-vs-mrhof--contiki-ng)
