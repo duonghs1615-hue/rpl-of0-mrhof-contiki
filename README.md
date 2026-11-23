@@ -50,7 +50,7 @@ So sánh hai hàm mục tiêu của giao thức định tuyến RPL: **OF0** và
 4. Kiểm tra log: **OCP 0 = OF0**, **OCP 1 = MRHOF**.
 5. Phân tích lại log (chạy tại thư mục gốc dự án):
    ```bash
-   python3 scripts/analyze_logs.py --logs logs/cooja --out results --window-seconds 300
+   python3 scripts/analyze_logs.py
    ```
 
 ### 4. Kết quả Cooja
@@ -124,7 +124,7 @@ This project compares two RPL objective functions, **Objective Function Zero (OF
 4. Verify logs: **OCP 0 = OF0**, **OCP 1 = MRHOF**.
 5. Regenerate CSV results from the project root:
    ```bash
-   python3 scripts/analyze_logs.py --logs logs/cooja --out results --window-seconds 300
+   python3 scripts/analyze_logs.py
    ```
 
 ### 4. Cooja results
