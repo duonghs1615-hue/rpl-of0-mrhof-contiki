@@ -2,62 +2,52 @@
 
 [![Tiếng Việt](https://img.shields.io/badge/Ti%E1%BA%BFng_Vi%E1%BB%87t-2ea44f?style=for-the-badge)](#vietnamese) [![English](https://img.shields.io/badge/English-0969da?style=for-the-badge)](#english)
 
-> Chọn ngôn ngữ ở trên để chuyển nhanh đến nội dung tương ứng. / Select a language above to jump to its section.
->
-> **⚠️ Trước khi chạy:** Cần sửa 2 đường dẫn mã nguồn trong file `.csc` theo mục 3 bên dưới. / **Before running:** Update the 2 source paths in each `.csc` file as described in Section 3.
-
 ---
 
 ## Vietnamese
 
-### 1. Tổng quan
+### Tổng quan
 
-So sánh hai hàm mục tiêu của giao thức định tuyến RPL: **OF0** và **MRHOF** trên **Cooja (Contiki-NG)** và **FIT IoT-LAB**.
+So sánh **RPL OF0** và **MRHOF** trên **Contiki-NG/Cooja** và kiểm chứng trên **FIT IoT-LAB**.
 
-- **Cooja:** 15 nút (1 root, 14 client); 3 topology (Line, Grid, Random); 5 lần chạy/trường hợp; cửa sổ phân tích 300 giây.
-- **FIT IoT-LAB:** 15 nút M3 tại Grenoble (`m3-207` là root; `m3-208`–`m3-221` là client); lưu log riêng.
-- **Chỉ số:** PDR, độ trễ một chiều (client → root), số hop ước lượng, số lần đổi preferred parent (không tính lần chọn ban đầu).
+- **Cooja:** 15 node (1 root, 14 client), 3 topology (**Line, Grid, Random**), 5 seed mỗi cấu hình (**101, 202, 303, 404, 123456**).
+- **Đánh giá:** PDR, Delay, Hop Count và Parent Changes trong **300 giây đầu** của mỗi log.
+- **FIT IoT-LAB:** 15 node M3 tại Grenoble; log lưu riêng, không được script Cooja phân tích.
 
-### 2. Cấu trúc thư mục
+### Chạy phân tích log
 
-- `cooja/OF0/`, `cooja/MRHOF/`: mã nguồn và cấu hình hai thuật toán.
-- `cooja/topology/`: các file mô phỏng `.csc`.
-- `fit-iotlab/`: mã nguồn cho M3; `logs/`: log Cooja và IoT-LAB.
-- `scripts/analyze_logs.py`: script xử lý log; `results/`: kết quả CSV của Cooja.
+Từ thư mục gốc dự án trên Ubuntu:
 
-### 3. Cách chạy mô phỏng (lưu ý: phải sửa đường dẫn)
+```bash
+cd ~/rpl-of0-mrhof-contiki
+python3 scripts/analyze_logs.py
+```
 
-1. Chép **đầy đủ 4 file** (`Makefile`, `project-conf.h`, `udp-server.c`, `udp-client.c`) từ `cooja/OF0/` vào `contiki-ng/examples/rpl-of0/`; làm tương tự với `cooja/MRHOF/` vào `contiki-ng/examples/rpl-mrhof/`.
-2. Mở file mô phỏng cần chạy trong **`cooja/topology/*.csc`** bằng trình soạn thảo văn bản. Tìm **2 dòng `<source>`** đang có:
-   ```xml
-   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-server.c</source>
-   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-client.c</source>
-   ```
-   **Đổi thành một trong hai cặp sau, tùy thuật toán muốn chạy:**
+Script tự đọc toàn bộ `.log` trong `logs/cooja/` và dùng khoảng thời gian **[0, 300) giây** (mặc định, không cần thêm tham số). **Lệnh này chỉ phân tích log có sẵn, không chạy lại Cooja.**
 
-   **OF0:**
-   ```xml
-   <source>[CONTIKI_DIR]/examples/rpl-of0/udp-server.c</source>
-   <source>[CONTIKI_DIR]/examples/rpl-of0/udp-client.c</source>
-   ```
-   **MRHOF:**
-   ```xml
-   <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-server.c</source>
-   <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-client.c</source>
-   ```
-   **Lưu ý:** Giữ nguyên `[CONTIKI_DIR]` vì Cooja dùng ký hiệu này để tham chiếu thư mục cài Contiki-NG. Chỉ cần đổi `rpl-udp` thành `rpl-of0` hoặc `rpl-mrhof` **nếu đã chép mã nguồn vào đúng các thư mục ở bước 1**. Nên lưu thành 2 bản `.csc` riêng để khỏi sửa lại khi đổi thuật toán.
-3. Chạy Cooja: `cd ~/contiki-ng/tools/cooja && ./gradlew run`, chọn **File → Open simulation**, mở `.csc` và biên dịch lại mote nếu cần.
-4. Kiểm tra log: **OCP 0 = OF0**, **OCP 1 = MRHOF**.
-5. Phân tích lại log (chạy tại thư mục gốc dự án):
-   ```bash
-   python3 scripts/analyze_logs.py
-   ```
+Kết quả được ghi vào:
 
-### 4. Kết quả Cooja
+- `results/cooja_runs.csv`: từng file log/seed, có tên file và các cột **Sent, Raw Rx, Unique Rx, Dup Rx, PDR, Delay, Hop Count, Parent Changes**.
+- `results/cooja_summary.csv`: **trung bình và độ lệch chuẩn** qua 5 seed của từng topology và OF.
 
-Giá trị trung bình qua 5 lần chạy mỗi trường hợp:
+Mở bằng LibreOffice Calc:
 
-| Topology | OF | PDR (%) | Delay (ms) | Hops* | Đổi parent |
+```bash
+libreoffice --calc results/cooja_runs.csv
+libreoffice --calc results/cooja_summary.csv
+```
+
+**Giải thích:** `Raw Rx` = tổng sự kiện nhận ghi trong log; `Unique Rx` = gói nhận ghép được với gói gửi (không tính trùng); `Dup Rx` = bản ghi nhận trùng. **PDR = Unique Rx / Sent × 100%**. `OCP 0` = OF0; `OCP 1` = MRHOF. Seed được lấy từ **tên file log**. Hop Count là **ước lượng từ sự kiện chuyển tiếp RPL**, không phải số hop đã xác minh tuyệt đối cho mọi gói. Các dòng `NOTE/WARNING` chỉ ra bản ghi trùng, gói nhận sau 300 giây hoặc sự kiện chuyển tiếp lặp, cần xem khi diễn giải số liệu.
+
+### Chạy lại mô phỏng Cooja (nếu cần)
+
+1. Chép `Makefile`, `project-conf.h`, `udp-client.c`, `udp-server.c` từ `cooja/OF0/` vào `contiki-ng/examples/rpl-of0/`; làm tương tự từ `cooja/MRHOF/` vào `contiki-ng/examples/rpl-mrhof/`.
+2. Mở file `.csc` trong `cooja/topology/`. Hai dòng `<source>` đang trỏ tới `examples/rpl-udp/` cần được đổi thành **`examples/rpl-of0/`** hoặc **`examples/rpl-mrhof/`** cho cả `udp-client.c` và `udp-server.c`. Giữ nguyên biến `[CONTIKI_DIR]`. Nên lưu `.csc` riêng cho từng OF.
+3. Mở Cooja bằng `cd ~/contiki-ng/tools/cooja && ./gradlew run`, nạp mô phỏng và biên dịch lại mote nếu cần. Kiểm tra OCP trong log để xác nhận OF.
+
+### Kết quả và hạn chế
+
+| Topology | OF | PDR TB (%) | Delay TB (ms) | Hop TB* | Đổi parent TB |
 |---|---|---:|---:|---:|---:|
 | Line | OF0 | 99.817 | 100.383 | 3.738 | 5.4 |
 | Line | MRHOF | 100.000 | 99.511 | 3.733 | 0.0 |
@@ -66,72 +56,68 @@ Giá trị trung bình qua 5 lần chạy mỗi trường hợp:
 | Random | OF0 | 99.941 | 94.954 | 3.497 | 5.4 |
 | Random | MRHOF | 100.000 | 94.467 | 3.477 | 0.0 |
 
-*Hop Count được ước lượng từ log. Cả hai có PDR gần 100%; MRHOF ít đổi parent hơn trong các trường hợp đã thử, nhưng chênh lệch Delay/Hops nhỏ.*
+*Trung bình của 5 seed; độ lệch chuẩn có trong `cooja_summary.csv`. Hop Count là giá trị ước lượng.*
 
-### 5. Hạn chế và hướng phát triển
+**Hạn chế:** chỉ 15 node và 300 giây; radio mô phỏng cấu hình xác suất thành công truyền/nhận bằng 1.0; 5 seed cùng topology giữ nguyên vị trí node; chưa đánh giá suy hao mạnh, tải cao, năng lượng hay độ ổn định dài hạn. **MRHOF ít đổi parent hơn trong các thử nghiệm này**, nhưng không có cơ sở kết luận luôn tốt hơn OF0.
 
-- Chỉ 15 nút và 300 giây phân tích; chưa đánh giá khả năng mở rộng và ổn định dài hạn.
-- Radio Cooja đặt `success_ratio_tx = 1.0`, `success_ratio_rx = 1.0`; chưa thử liên kết suy hao đáng kể.
-- Năm lần chạy của cùng topology có **vị trí nút giống nhau**; chưa thử nhiều bố trí độc lập, tải cao hoặc nút di chuyển.
-- Hop Count chỉ là **ước lượng từ log**; MRHOF không đổi parent trong log hiện tại **không có nghĩa** thuật toán luôn không đổi parent.
-- Chưa đo tiêu thụ năng lượng, routing overhead, network lifetime; chưa đối chiếu định lượng trực tiếp với kết quả FIT IoT-LAB.
+### Cập nhật GitHub
 
-**Kết luận:** Với các điều kiện đã mô phỏng, OF0 và MRHOF có PDR tương đương; MRHOF có Delay thấp hơn đôi chút và ít đổi parent hơn. **Không thể kết luận MRHOF luôn tốt hơn OF0.** Nên mở rộng số nút, thời gian, chất lượng liên kết và tải mạng, đồng thời bổ sung chỉ số năng lượng.
+Sau khi chạy script và kiểm tra kết quả, cập nhật hai file `results/cooja_runs.csv` và `results/cooja_summary.csv`. **Nếu GitHub chưa có bản `analyze_logs.py` mới và README này thì cập nhật cả hai file đó.** Ví dụ:
 
-**[🇬🇧 Switch to English](#english) · [⬆ Back to language selection](#rpl-of0-vs-mrhof--contiki-ng)**
+```bash
+git add README.md scripts/analyze_logs.py results/cooja_runs.csv results/cooja_summary.csv
+git commit -m "Update README and Cooja log analysis results"
+git push
+```
+
+[🇬🇧 English](#english) · [⬆ Chọn ngôn ngữ](#rpl-of0-vs-mrhof--contiki-ng)
 
 ---
 
 ## English
 
-### 1. Overview
+### Overview
 
-This project compares two RPL objective functions, **Objective Function Zero (OF0)** and **Minimum Rank with Hysteresis Objective Function (MRHOF)**, using **Cooja (Contiki-NG)** and **FIT IoT-LAB**.
+Comparison of **RPL OF0** and **MRHOF** using **Contiki-NG/Cooja**, with additional **FIT IoT-LAB** validation.
 
-- **Cooja:** 15 nodes (1 root, 14 clients); 3 topologies (Line, Grid, Random); 5 runs per case; 300-second analysis window.
-- **FIT IoT-LAB:** 15 M3 nodes at Grenoble (`m3-207` as root; `m3-208`–`m3-221` as clients), with separately stored logs.
-- **Metrics:** PDR, one-way delay (client → root), estimated hop count, and preferred-parent changes (excluding initial selection).
+- **Cooja:** 15 nodes (1 root, 14 clients), 3 topologies (**Line, Grid, Random**), 5 seeds per configuration (**101, 202, 303, 404, 123456**).
+- **Metrics:** PDR, delay, hop count, and preferred-parent changes within the **first 300 seconds** of each log.
+- **FIT IoT-LAB:** 15 M3 nodes in Grenoble; hardware logs are stored separately and are not processed by the Cooja analyzer.
 
-### 2. Project structure
+### Analyze existing logs
 
-- `cooja/OF0/`, `cooja/MRHOF/`: source code and configurations for each objective function.
-- `cooja/topology/`: Cooja simulation files (`.csc`).
-- `fit-iotlab/`: M3 source code; `logs/`: Cooja and IoT-LAB logs.
-- `scripts/analyze_logs.py`: log analysis script; `results/`: Cooja CSV results.
+Run from the repository root on Ubuntu:
 
-### 3. Run Cooja simulations (important: update source paths)
+```bash
+cd ~/rpl-of0-mrhof-contiki
+python3 scripts/analyze_logs.py
+```
 
-1. Copy **all four files** (`Makefile`, `project-conf.h`, `udp-server.c`, `udp-client.c`) from `cooja/OF0/` to `contiki-ng/examples/rpl-of0/`; likewise, copy the MRHOF files to `contiki-ng/examples/rpl-mrhof/`.
-2. Open the simulation file in **`cooja/topology/*.csc`** with a text editor. Find the **two `<source>` entries**:
-   ```xml
-   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-server.c</source>
-   <source>[CONTIKI_DIR]/examples/rpl-udp/udp-client.c</source>
-   ```
-   **Replace them with the matching pair for the algorithm:**
+The script reads `.log` files under `logs/cooja/` and analyzes the **[0, 300)-second** window by default. **It processes existing logs; it does not start a Cooja simulation.**
 
-   **OF0:**
-   ```xml
-   <source>[CONTIKI_DIR]/examples/rpl-of0/udp-server.c</source>
-   <source>[CONTIKI_DIR]/examples/rpl-of0/udp-client.c</source>
-   ```
-   **MRHOF:**
-   ```xml
-   <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-server.c</source>
-   <source>[CONTIKI_DIR]/examples/rpl-mrhof/udp-client.c</source>
-   ```
-   **Note:** Keep `[CONTIKI_DIR]` unchanged; Cooja uses it as a reference to the Contiki-NG installation. Only change `rpl-udp` to `rpl-of0` or `rpl-mrhof` **after copying the respective source files as in Step 1**. Save separate `.csc` copies for OF0 and MRHOF to avoid switching paths repeatedly.
-3. Start Cooja: `cd ~/contiki-ng/tools/cooja && ./gradlew run`, select **File → Open simulation**, load the `.csc` file, and recompile motes if necessary.
-4. Verify logs: **OCP 0 = OF0**, **OCP 1 = MRHOF**.
-5. Regenerate CSV results from the project root:
-   ```bash
-   python3 scripts/analyze_logs.py
-   ```
+Outputs:
 
-### 4. Cooja results
+- `results/cooja_runs.csv`: per-run and per-seed data, including file name, **Sent, Raw Rx, Unique Rx, Dup Rx, PDR, Delay, Hop Count, and Parent Changes**.
+- `results/cooja_summary.csv`: **mean and standard deviation** across five seeds for each topology/objective function.
 
-Mean values across five runs per case:
+Open in LibreOffice Calc:
 
-| Topology | OF | PDR (%) | Delay (ms) | Hops* | Parent changes |
+```bash
+libreoffice --calc results/cooja_runs.csv
+libreoffice --calc results/cooja_summary.csv
+```
+
+**Definitions:** `Raw Rx` counts all reception log events; `Unique Rx` counts matched deliveries excluding duplicates; `Dup Rx` counts duplicate receptions. **PDR = Unique Rx / Sent × 100%**. `OCP 0` identifies OF0; `OCP 1` identifies MRHOF. Seeds are parsed from **log filenames**. Hop count is an **estimate from RPL forwarding events**, not a verified exact path length for every packet. `NOTE/WARNING` messages flag duplicates, receptions after 300 seconds, or repeated forwarding events.
+
+### Rerun Cooja simulations (optional)
+
+1. Copy `Makefile`, `project-conf.h`, `udp-client.c`, and `udp-server.c` from `cooja/OF0/` into `contiki-ng/examples/rpl-of0/`; copy the MRHOF counterparts into `contiki-ng/examples/rpl-mrhof/`.
+2. Open a `.csc` file under `cooja/topology/`. Change the two `<source>` entries for `udp-client.c` and `udp-server.c` from `examples/rpl-udp/` to **`examples/rpl-of0/`** or **`examples/rpl-mrhof/`**, matching the OF. Keep `[CONTIKI_DIR]` unchanged. Separate `.csc` copies are recommended.
+3. Start Cooja with `cd ~/contiki-ng/tools/cooja && ./gradlew run`, load the simulation, and recompile motes if required. Verify the OCP in the logs.
+
+### Results and limitations
+
+| Topology | OF | Mean PDR (%) | Mean delay (ms) | Mean hops* | Mean parent changes |
 |---|---|---:|---:|---:|---:|
 | Line | OF0 | 99.817 | 100.383 | 3.738 | 5.4 |
 | Line | MRHOF | 100.000 | 99.511 | 3.733 | 0.0 |
@@ -140,16 +126,18 @@ Mean values across five runs per case:
 | Random | OF0 | 99.941 | 94.954 | 3.497 | 5.4 |
 | Random | MRHOF | 100.000 | 94.467 | 3.477 | 0.0 |
 
-*Hop Count is estimated from RPL logs. Both functions achieved nearly 100% PDR. MRHOF showed fewer parent changes in these runs, while differences in delay and hop count were small.*
+*Means across five seeds; standard deviations are available in `cooja_summary.csv`. Hop count is estimated.*
 
-### 5. Limitations and future work
+**Limitations:** 15 nodes and a 300-second window; radio transmission/reception success probabilities configured to 1.0; identical node positions across seeds within each topology; degraded links, heavy traffic, energy use, and long-term stability were not evaluated. **MRHOF showed fewer parent changes in these runs**, but these results do not establish universal superiority over OF0.
 
-- Only 15 nodes and a 300-second analysis window; scalability and long-term stability remain untested.
-- Cooja used `success_ratio_tx = 1.0` and `success_ratio_rx = 1.0`; substantially degraded links were not evaluated.
-- The five runs within each topology used **identical node positions**; independent layouts, heavy traffic, and mobility were not examined.
-- Hop count is **estimated from logs**. Zero parent changes for MRHOF in these runs **does not mean** MRHOF never changes parents.
-- Energy consumption, routing overhead, and network lifetime were not measured; Cooja and FIT IoT-LAB results were not directly compared quantitatively.
+### Update GitHub
 
-**Conclusion:** Under the tested conditions, OF0 and MRHOF achieved similar PDR. MRHOF showed slightly lower delay and fewer parent changes. **These results do not prove MRHOF is always better than OF0.** Future work should test larger and longer-running networks, degraded links, different traffic loads, and energy-related metrics.
+After running the script, upload the updated `results/cooja_runs.csv` and `results/cooja_summary.csv`. **Also upload the latest `scripts/analyze_logs.py` and this `README.md` if they are not yet on GitHub.** For example:
 
-**[🇻🇳 Chuyển sang Tiếng Việt](#vietnamese) · [⬆ Back to language selection](#rpl-of0-vs-mrhof--contiki-ng)**
+```bash
+git add README.md scripts/analyze_logs.py results/cooja_runs.csv results/cooja_summary.csv
+git commit -m "Update README and Cooja log analysis results"
+git push
+```
+
+[🇻🇳 Tiếng Việt](#vietnamese) · [⬆ Language selection](#rpl-of0-vs-mrhof--contiki-ng)
